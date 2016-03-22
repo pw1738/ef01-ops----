@@ -1,0 +1,5 @@
+/*
+!.gitignore
+/Sourceinsight_prj/*
+!/MDK_prj/
+!/Source/
