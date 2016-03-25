@@ -163,6 +163,7 @@ int main(void)
 
     for(;;)
     {
+        OS_Loop();
     }
 }
 

@@ -46,7 +46,15 @@ Others      :
 #define PERIOD_IDLE 0
 
 /* Private typedef -----------------------------------------------------------*/
+typedef struct{
+    uint32_t uiOSTimeCounter;
+    uint32_t uiOSTimeCounterBackup;
+    uint32_t uiLastOSTimeCounter;
+}ST_OS_CB_Type;
+
+
 /* Private variables ---------------------------------------------------------*/
+ST_OS_CB_Type g_stOSCB = {0};
 
 
 
@@ -125,6 +133,51 @@ void OS_Init(void)
 }
 
 
+void OS_Loop(void)
+{
+    int iLoop;
+
+    g_stOSCB.uiOSTimeCounterBackup = g_stOSCB.uiOSTimeCounter;
+    if(g_stOSCB.uiOSTimeCounterBackup > g_stOSCB.uiLastOSTimeCounter)
+    {
+        for(iLoop = 0; iLoop < OS_TASK_MAX; iLoop++)
+        {
+            if(g_astOSTaskArray[iLoop].period != 0)
+            {
+                if(g_astOSTaskArray[iLoop].period >= g_stOSCB.uiOSTimeCounterBackup - g_stOSCB.uiLastOSTimeCounter)
+                {
+                    g_astOSTaskArray[iLoop].period -= g_stOSCB.uiOSTimeCounterBackup - g_stOSCB.uiLastOSTimeCounter;
+                }
+                else
+                {
+                    g_astOSTaskArray[iLoop].period = 0;
+                }
+            }
+
+            if(0 == g_astOSTaskArray[iLoop].period)
+            {
+                if(EN_TASK_OneShot == g_astOSTaskArray[iLoop].mode)
+                {
+                    if(g_astOSTaskArray[iLoop].periodicFunc)
+                    {
+                        g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
+                    }
+                    __OS_Clear_TaskStruct(&g_astOSTaskArray[iLoop]);
+                }
+                else
+                {
+                    if(g_astOSTaskArray[iLoop].periodicFunc)
+                    {
+                        g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
+                    }
+                    g_astOSTaskArray[iLoop].period = g_astOSTaskArray[iLoop].periodBackup;
+                }
+            }
+        } 
+        g_stOSCB.uiLastOSTimeCounter = g_stOSCB.uiOSTimeCounter;
+    }
+}
+
 /*******************************************************************************
  Prototype    : OS_ISR_handler
  Description  : 
@@ -142,35 +195,7 @@ void OS_Init(void)
 *******************************************************************************/
 void OS_ISR_handler(void)
 {
-    int iLoop;
-    
-    for(iLoop = 0; iLoop < OS_TASK_MAX; iLoop++)
-    {
-        if(g_astOSTaskArray[iLoop].period != 0)
-        {
-            g_astOSTaskArray[iLoop].period--;
-        }
-
-        if(0 == g_astOSTaskArray[iLoop].period)
-        {
-            if(EN_TASK_OneShot == g_astOSTaskArray[iLoop].mode)
-            {
-                if(g_astOSTaskArray[iLoop].periodicFunc)
-                {
-                    g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
-                }
-                __OS_Clear_TaskStruct(&g_astOSTaskArray[iLoop]);
-            }
-            else
-            {
-                if(g_astOSTaskArray[iLoop].periodicFunc)
-                {
-                    g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
-                }
-                g_astOSTaskArray[iLoop].period = g_astOSTaskArray[iLoop].periodBackup;
-            }
-        }
-    }
+    g_stOSCB.uiOSTimeCounter++;
 }
 
 
