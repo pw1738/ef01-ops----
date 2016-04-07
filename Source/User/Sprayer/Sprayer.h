@@ -73,8 +73,6 @@ typedef struct ST_Sprayer{
         uint8_t ucSprayerChannelSwitchState;
     }uSprayerChannelSwitchState;
 
-
-    void (*init)(struct ST_Sprayer *this);
     void (*setAtomize)(struct ST_Sprayer *this, uint8_t level);
     void (*setFlow)(struct ST_Sprayer *this, uint8_t level);
     void (*stateSwitch)(struct ST_Sprayer *this, EN_StateSwitch_Type type);
@@ -95,6 +93,7 @@ extern Sprayer g_stDevSprayer;
 /*============================================================================*/
 /*                                    @FUNCS                                  */
 /*============================================================================*/
+void Sprayer_Init(Sprayer *this);
 
 
 

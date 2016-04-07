@@ -34,17 +34,20 @@
 #include "Sprayer\Valve.h"
 #include "Sprayer\Nozzle.h"
 #include "Sprayer\Sprayer.h"
-#include "pwm.h"
+
+
+
 
     
 /* Private macro&definde------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+uint16_t TimerPeriod = 0;
+uint16_t Channel1Pulse = 0, Channel2Pulse = 0, Channel3Pulse = 0, Channel4Pulse = 0;
 
 
 
 /* Private functions ---------------------------------------------------------*/
-static void _Sprayer_Init(struct ST_Sprayer *this);
 static void _Sprayer_SetAtomize(Sprayer *this, uint8_t level);
 static void _Sprayer_SetFlow(Sprayer *this, uint8_t level);
 static void _Sprayer_StateSwitch(struct ST_Sprayer *this, EN_StateSwitch_Type type);
@@ -73,13 +76,106 @@ Sprayer g_stDevSprayer = {
     0,
     0,
     {0},
-    _Sprayer_Init,
+    //_Sprayer_Init,
     _Sprayer_SetAtomize,
     _Sprayer_SetFlow,
     _Sprayer_StateSwitch
 };
 
 
+TIM_OCInitTypeDef  TIM_OCInitStructure;  
+TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+
+
+static void _Sprayer_Lowlevel_Init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure; 
+      
+    /*!< clock enable */ 
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO,ENABLE);  
+    /*!< PCLK1经过2倍频后作为TIM3的时钟源等于72MHz*/  
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);       
+ 
+    /*!< GPIOA Configuration: TIM3 channel 1 and 3 as alternate function push-pull */ 
+    GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_8 | GPIO_Pin_9 |GPIO_Pin_10; 
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;           // 复用推挽输出 
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz; 
+    GPIO_Init(GPIOA, &GPIO_InitStructure);   
+
+    /*!< Switch  PA9 configuration */
+    //GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_9;
+    //GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    //GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;	
+    //GPIO_Init(GPIOA, &GPIO_InitStructure);   // Initialize GPIO A      
+
+    /* TIM1 Configuration ---------------------------------------------------
+       Generate 7 PWM signals with 4 different duty cycles:
+       TIM1CLK = SystemCoreClock, Prescaler = 0, TIM1 counter clock = SystemCoreClock
+       SystemCoreClock is set to 72 MHz for Low-density, Medium-density, High-density
+       and Connectivity line devices and to 24 MHz for Low-Density Value line and
+       Medium-Density Value line devices
+
+       The objective is to generate 7 PWM signal at 16 Hz:
+       - TIM1_Period = (SystemCoreClock /((499 + 1)* 16)) - 1
+       The channel 1 and channel 1N duty cycle is set to 50%
+       The channel 2 and channel 2N duty cycle is set to 37.5%
+       The channel 3 and channel 3N duty cycle is set to 25%
+       The channel 4 duty cycle is set to 12.5%
+       The Timer pulse is calculated as follows:
+       - ChannelxPulse = DutyCycle * (TIM1_Period - 1) / 100
+       ----------------------------------------------------------------------- */
+
+    /* Compute the value to be set in ARR regiter to generate signal frequency at 16 hz */
+    TimerPeriod = (SystemCoreClock / ((499 + 1) * 16) ) - 1;
+    /* Compute CCR1 value to generate a duty cycle at 50% for channel 1 and 1N */
+    //Channel1Pulse = (uint16_t) (((uint32_t) 5 * (TimerPeriod - 1)) / 10);
+    Channel1Pulse = (uint16_t) (((uint32_t) 0 * (TimerPeriod - 1)) / 100);
+    /* Compute CCR2 value to generate a duty cycle at 37.5%  for channel 2 and 2N */
+    //Channel2Pulse = (uint16_t) (((uint32_t) 375 * (TimerPeriod - 1)) / 1000);
+    Channel2Pulse = (uint16_t) (((uint32_t) 0 * (TimerPeriod - 1)) / 100);
+    /* Compute CCR3 value to generate a duty cycle at 25%  for channel 3 and 3N */
+    //Channel3Pulse = (uint16_t) (((uint32_t) 25 * (TimerPeriod - 1)) / 100);
+    Channel3Pulse = (uint16_t) (((uint32_t) 0 * (TimerPeriod - 1)) / 100);
+    /* Compute CCR4 value to generate a duty cycle at 12.5%  for channel 4 */
+    //Channel4Pulse = (uint16_t) (((uint32_t) 125 * (TimerPeriod- 1)) / 1000);
+    Channel4Pulse = (uint16_t) (((uint32_t) 0 * (TimerPeriod- 1)) / 100);
+
+    TIM_DeInit(TIM1);
+    /* Time Base configuration */
+    TIM_TimeBaseStructure.TIM_Prescaler = 499;
+    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseStructure.TIM_Period = TimerPeriod;
+    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+    TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+
+    /* Channel 1, 2,3 and 4 Configuration in PWM mode */
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
+    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
+    TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
+    TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Reset;
+    
+    TIM_OCInitStructure.TIM_Pulse = Channel1Pulse;
+    TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OCInitStructure.TIM_Pulse = Channel2Pulse;
+    TIM_OC2Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OCInitStructure.TIM_Pulse = Channel3Pulse;
+    TIM_OC3Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OCInitStructure.TIM_Pulse = Channel4Pulse;
+    TIM_OC4Init(TIM1, &TIM_OCInitStructure);
+
+    /* TIM1 counter enable */
+    TIM_Cmd(TIM1, ENABLE);
+
+    /* TIM1 Main Output Enable */
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);    
+}
 
 
 /*******************************************************************************
@@ -97,32 +193,46 @@ Sprayer g_stDevSprayer = {
     Modification -- Created function
 
 *******************************************************************************/
-static void _Sprayer_Init(struct ST_Sprayer *this)
+void Sprayer_Init(Sprayer *this)
 {
-    int iLoop;
+    _Sprayer_Lowlevel_Init();
+}
 
-    PWM_Init();
+static void _Sprayer_PWMSet(uint8_t ucPumpLevel, uint8_t ucNozzleLevel, uint8_t ucWalveLevel)
+{
+
+    /* TIM1 Deinit */
+    TIM_DeInit(TIM1);
     
-    if(this->itsPump)
-    {
-        this->itsPump->dev->init(this->itsPump, this->itsPump->dev);
-    }
+    /* Compute CCR1 value to generate a duty cycle at 50% for channel 1 and 1N */
+    Channel1Pulse = (uint16_t) (((uint32_t) ucPumpLevel * (TimerPeriod - 1)) / 100);
+    /* Compute CCR2 value to generate a duty cycle at 37.5%  for channel 2 and 2N */
+    Channel2Pulse = (uint16_t) (((uint32_t) ucWalveLevel * (TimerPeriod - 1)) / 100);
+    /* Compute CCR3 value to generate a duty cycle at 25%  for channel 3 and 3N */
+    Channel3Pulse = (uint16_t) (((uint32_t) ucNozzleLevel * (TimerPeriod - 1)) / 100);
+    /* Compute CCR4 value to generate a duty cycle at 12.5%  for channel 4 */
+    Channel4Pulse = (uint16_t) (((uint32_t) 125 * (TimerPeriod- 1)) / 1000);
 
-    for(iLoop = 0; iLoop < 8; iLoop++)
-    {
-        if(this->astFlowChannelArray[iLoop] != NULL)
-        {
-            if(this->astFlowChannelArray[iLoop]->valve != NULL)
-            {
-                this->astFlowChannelArray[iLoop]->valve->dev->init(this->astFlowChannelArray[iLoop]->valve, this->astFlowChannelArray[iLoop]->valve->dev);
-            }
+    /* Time Base configuration */
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
 
-            if(this->astFlowChannelArray[iLoop]->nozzle != NULL)
-            {
-                this->astFlowChannelArray[iLoop]->nozzle->dev->init(this->astFlowChannelArray[iLoop]->nozzle, this->astFlowChannelArray[iLoop]->nozzle->dev);
-            }
-        }
-    }
+    TIM_OCInitStructure.TIM_Pulse = Channel1Pulse;
+    TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OCInitStructure.TIM_Pulse = Channel2Pulse;
+    TIM_OC2Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OCInitStructure.TIM_Pulse = Channel3Pulse;
+    TIM_OC3Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OCInitStructure.TIM_Pulse = Channel4Pulse;
+    TIM_OC4Init(TIM1, &TIM_OCInitStructure);
+
+    /* TIM1 counter enable */
+    TIM_Cmd(TIM1, ENABLE);
+
+    /* TIM1 Main Output Enable */
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);       
 }
 
 static void _Sprayer_StateSwitch(struct ST_Sprayer *this, EN_StateSwitch_Type type)
@@ -133,17 +243,24 @@ static void _Sprayer_StateSwitch(struct ST_Sprayer *this, EN_StateSwitch_Type ty
         //_Sprayer_SetAtomize(this, this->ucAtomizeLevel);
         //this->itsPump->set(this->itsPump, this->ucFlowLevel);
         //this->astFlowChannelArray[0]->nozzle->set(this->astFlowChannelArray[0]->nozzle, this->ucFlowLevel);
-        this->astFlowChannelArray[0]->valve->StateSwitch(this->astFlowChannelArray[0]->valve, ON);
-        PWM_Config(this->ucAtomizeLevel, this->ucFlowLevel);
+        //this->astFlowChannelArray[0]->valve->StateSwitch(this->astFlowChannelArray[0]->valve, ON);
+        //PWM_Config(50, 80);
+        _Sprayer_PWMSet(this->ucFlowLevel, this->ucAtomizeLevel, 100);
+        //_Sprayer_PWMSet(60, 80, 100);
         this->ucIsSprayerOn = ON;
     }
     else /*!< OFF */
     {
         //_Sprayer_SetFlow(this, 0);
         //_Sprayer_SetAtomize(this, 0);  
-        this->astFlowChannelArray[0]->valve->StateSwitch(this->astFlowChannelArray[0]->valve, OFF);
-        PWM_Disable();
-        this->ucIsSprayerOn = OFF;    
+        if(this->ucIsSprayerOn != OFF)
+        {					
+            //this->astFlowChannelArray[0]->valve->StateSwitch(this->astFlowChannelArray[0]->valve, OFF);
+            //PWM_Disable();
+            //PWM_Config(0, 0);
+            _Sprayer_PWMSet(0, 0, 0);
+            this->ucIsSprayerOn = OFF;    
+        }
     }
 }
 

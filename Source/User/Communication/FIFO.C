@@ -1,69 +1,74 @@
-
-
-
-
-
-/**** System include files ****/
-#include <stdint.h>
-#include "stm32f10x.h"
-/*---Public include files---------------------------------------------*/
-
-/*---Private include files--------------------------------------------*/
-#include "Communication\FIFO_IF.H" 
-#include "Communication\FIFO.H"   
-
-/*===VARIABLES========================================================*/
-
-/*---Global-----------------------------------------------------------*/
-
-/*---Private----------------------------------------------------------*/
- 
-/*===FUNCTIONS========================================================*/
-
-/*---Global-----------------------------------------------------------*/
- 
 /*******************************************************************************
-**  FUNCTION      : fifo_init                                         
-**  DESCRIPTION   : This function initialize FIFO
-**  PARAMETERS    : this
-**                  pBuf
-**                  nSize  
-**  RETURN        : void                                                          
+        (c) COPYRIGHT 2010-2018 by Efficient Systems, Inc.    
+                          All rights reserved.
+    
+       This software is confidential and proprietary to Efficient 
+     Systems, Inc.  No part of this software may be reproduced,    
+     stored, transmitted, disclosed or used in any form or by any means
+     other than as expressly provided by the written license agreement    
+     between Efficient Systems and its licensee.
+ FileName    : Fifo.c
+ Author      : rw
+ Version     : 
+ Date        : 2016/3/8 22:33:59:33
+ Description : 
+ Others      : 
+
+ History      :
+  1.Date         -- 2016/3/8 22:33:59:33
+    Author       -- rw
+    Modification -- Created file
+
 *******************************************************************************/
-void fifo_init(  FIFO_TYPE *this, uint8_t *pBuf, u16 nSize)
+    
+#define  FIFO_GLOBAL
+
+/* includes-------------------------------------------------------------------*/
+#include "serial_debug\serial_debug.h"
+#include "stm32f10x.h"
+#include "Fifo.h"
+    
+/* Private typedef&macro&definde----------------------------------------------*/
+
+/* Private variables ---------------------------------------------------------*/
+/* Private functions ---------------------------------------------------------*/
+static BOOL _Fifo_Input_Byte( ST_Fifo_Type *this ,unsigned char byte);
+static BOOL _Fifo_Output_Byte(ST_Fifo_Type *this, uint8_t *pdata);
+static uint16_t _Fifo_Current_Length(ST_Fifo_Type *this);
+static uint16_t _Fifo_Have_Enough_Space(ST_Fifo_Type *this ,uint8_t nBytes);
+
+
+/* External functions --------------------------------------------------------*/
+/* External variables --------------------------------------------------------*/
+    
+
+void Fifo_Init(ST_Fifo_Type *this, uint8_t *pBuf, uint16_t nSize)
 {
-    this->mpFIFOBuffer = pBuf;
-    this->mFIFOHead = 0x00;
-	this->mFIFOTail = 0x00;
-	this->mFIFOSize = nSize;
+    this->pucFifoBuffer = pBuf;
+    this->usFifoReadPtr = 0x00;
+    this->usFifoWritePtr = 0x00;
+    this->usFifoSize = nSize;
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_input_frame                                         
-**  DESCRIPTION   : This function input a frame to fifo buffer
-**  PARAMETERS    : this
-**                  pFrame
-**                  nBytes  
-**  RETURN        : void                                                          
-*******************************************************************************/
-BOOL fifo_input_frame( FIFO_TYPE *this , uint8_t *pFrame , uint8_t length)
+
+BOOL Fifo_Input_Frame(ST_Fifo_Type *this, uint8_t *pFrame ,uint8_t length)
 {
-  	uint8_t i;
+  	uint8_t iLoop;
   	uint8_t *pTemp = pFrame;
 
-    if(!fifo_have_enough_space(this, length))
+    if(!_Fifo_Have_Enough_Space(this, length))
     {
         return FALSE;
     }
 
-    if(!fifo_input_byte(this, length))
+    if(!_Fifo_Input_Byte(this, length))
     {
         return FALSE;
     }
 
-    for (i = 0x00; i < length; i++) //input (1 +nbyte) byte to FIFO
+    for(iLoop = 0x00; iLoop < length; iLoop++) //input (1 +nbyte) byte to FIFO
     {    
-    	if (!fifo_input_byte(this, *pTemp++))
+    	if(!_Fifo_Input_Byte(this, *pTemp++))
     	{
     	    return FALSE;
     	}
@@ -71,26 +76,19 @@ BOOL fifo_input_frame( FIFO_TYPE *this , uint8_t *pFrame , uint8_t length)
     return TRUE;
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_output_frame                                         
-**  DESCRIPTION   : This function output a frame from FIFO buffer
-**  PARAMETERS    : this
-**                  pFrame
-**                  nBytes  
-**  RETURN        : void                                                          
-*******************************************************************************/
-BOOL fifo_output_frame( FIFO_TYPE *this,  uint8_t *pFrame,  uint8_t *pLength)
+
+BOOL Fifo_Output_Frame(ST_Fifo_Type *this, uint8_t *pFrame, uint8_t *pLength)
 {
-  	uint8_t i;
+  	uint8_t iLoop;
   	uint8_t tempVal;
-    u16 tempLength;
+    uint16_t tempLength;
 //    uint8_t tempFrameLength;
     uint8_t *pTemp = pFrame;
 
-    tempLength = fifo_current_length(this);  
+    tempLength = _Fifo_Current_Length(this);  
 
     /*frist byte is the length of current frame*/
-    /*if(fifo_output_byte(this, &tempFrameLength))
+    /*if(_Fifo_Output_Byte(this, &tempFrameLength))
     {
         *pTemp++ = tempFrameLength;
     }
@@ -99,22 +97,21 @@ BOOL fifo_output_frame( FIFO_TYPE *this,  uint8_t *pFrame,  uint8_t *pLength)
         return FALSE;
     }*/
 
-    if(!fifo_output_byte(this, pLength))
+    if(!_Fifo_Output_Byte(this, pLength))
     {
         return FALSE;
     }
         
-        
     if(*pLength > tempLength || *pLength == 0x00)
     {
-       this->mFIFOHead = this->mFIFOTail;
-       return FALSE;
+        this->usFifoReadPtr = this->usFifoWritePtr;
+        return FALSE;
     }
     else
     {
-        for (i = 0x00; i < *pLength; i++)
+        for (iLoop = 0x00; iLoop < *pLength; iLoop++)
         {
-        	if (fifo_output_byte(this, &tempVal))
+        	if (_Fifo_Output_Byte(this, &tempVal))
         	{
         		*pTemp++ = tempVal;
         	}
@@ -129,17 +126,9 @@ BOOL fifo_output_frame( FIFO_TYPE *this,  uint8_t *pFrame,  uint8_t *pLength)
 }
 
 
-/*---Private----------------------------------------------------------*/
-
-/*******************************************************************************
-**  FUNCTION      : fifo_is_empty                                         
-**  DESCRIPTION   : This function check whether the FIFO is empty.
-**  PARAMETERS    : this:
-**  RETURN        : BOOL                                                          
-*******************************************************************************/
-BOOL fifo_is_empty(FIFO_TYPE *this  )
+BOOL Fifo_IS_Empty(ST_Fifo_Type *this)
 {
-    if(this->mFIFOHead == this->mFIFOTail)
+    if(this->usFifoReadPtr == this->usFifoWritePtr)
     {
         return TRUE;
     }
@@ -149,22 +138,17 @@ BOOL fifo_is_empty(FIFO_TYPE *this  )
 	}	
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_is_full                                         
-**  DESCRIPTION   : This function check whether the FIFO is full.
-**  PARAMETERS    : this
-**  RETURN        : BOOL                                                          
-*******************************************************************************/
-static BOOL fifo_is_full(FIFO_TYPE *this  )
+
+BOOL Fifo_IS_Full(ST_Fifo_Type *this)
 {
-	if (this->mFIFOHead > 0x00)
+	if (this->usFifoReadPtr > 0x00)
 	{
-		if (this->mFIFOTail == (this->mFIFOHead - 0x01))
+		if (this->usFifoWritePtr == (this->usFifoReadPtr - 0x01))
 		{
 			return TRUE;
 		}
 	}
-	else if (this->mFIFOTail == (this->mFIFOSize - 0x01))
+	else if (this->usFifoWritePtr == (this->usFifoSize - 0x01))
 	{
 		return TRUE;
 	}
@@ -172,25 +156,19 @@ static BOOL fifo_is_full(FIFO_TYPE *this  )
 	return FALSE;
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_input_byte                                         
-**  DESCRIPTION   : This function input a byte into FIFO.
-**  PARAMETERS    : this
-**                  byte
-**  RETURN        : BOOL
-*******************************************************************************/
-static BOOL fifo_input_byte( FIFO_TYPE *this , unsigned char byte )
-{
-    if (!fifo_is_full(this))
-    {
-        if (this->mFIFOTail < this->mFIFOSize)
-	    {
-            this->mpFIFOBuffer[this->mFIFOTail] = byte;
-            this->mFIFOTail++;
 
-            if(this->mFIFOTail >= this->mFIFOSize)
+static BOOL _Fifo_Input_Byte(ST_Fifo_Type *this, unsigned char byte)
+{
+    if(!Fifo_IS_Full(this))
+    {
+        if(this->usFifoWritePtr < this->usFifoSize)
+	    {
+            this->pucFifoBuffer[this->usFifoWritePtr] = byte;
+            this->usFifoWritePtr++;
+
+            if(this->usFifoWritePtr >= this->usFifoSize)
             {
-                this->mFIFOTail = 0x00;
+                this->usFifoWritePtr = 0x00;
             }
             return TRUE;
 	    }
@@ -198,24 +176,18 @@ static BOOL fifo_input_byte( FIFO_TYPE *this , unsigned char byte )
     return FALSE;
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_input_byte                                         
-**  DESCRIPTION   : This function input a byte into FIFO.
-**  PARAMETERS    : this
-**                  byte
-**  RETURN        : BOOL
-*******************************************************************************/
-static BOOL fifo_output_byte(FIFO_TYPE *this, uint8_t *pdata)
+
+static BOOL _Fifo_Output_Byte(ST_Fifo_Type *this, uint8_t *pdata)
 {
-    if (!fifo_is_empty(this))
+    if (!Fifo_IS_Empty(this))
     {
-		if (this->mFIFOHead < this->mFIFOSize)
-	  {
-	    	*pdata = this->mpFIFOBuffer[this->mFIFOHead];
-	    	this->mFIFOHead++;
-            if(this->mFIFOHead >= this->mFIFOSize)
+        if (this->usFifoReadPtr < this->usFifoSize)
+        {
+	    	*pdata = this->pucFifoBuffer[this->usFifoReadPtr];
+	    	this->usFifoReadPtr++;
+            if(this->usFifoReadPtr >= this->usFifoSize)
             {
-						this->mFIFOHead = 0x00;
+                this->usFifoReadPtr = 0x00;
             }
 		    return TRUE;
 		}
@@ -223,46 +195,35 @@ static BOOL fifo_output_byte(FIFO_TYPE *this, uint8_t *pdata)
 	return FALSE;
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_current_length                                         
-**  DESCRIPTION   : This function return the current length of FIFO buffer
-**  PARAMETERS    : this
-**  RETURN        : u16
-*******************************************************************************/
-static u16 fifo_current_length(FIFO_TYPE *this  )
-{
-  	u16 retVal;
 
-    if(this->mFIFOTail > this->mFIFOHead)
+static uint16_t _Fifo_Current_Length(ST_Fifo_Type *this)
+{
+  	uint16_t retVal;
+
+    if(this->usFifoWritePtr > this->usFifoReadPtr)
     {
-        retVal = this->mFIFOTail - this->mFIFOHead;
+        retVal = this->usFifoWritePtr - this->usFifoReadPtr;
     }
     else
     {
-        if (this->mFIFOHead == this->mFIFOTail)
+        if (this->usFifoReadPtr == this->usFifoWritePtr)
         {
             retVal = 0x00; 
         }
         else
         {
-            retVal = this->mFIFOSize - (this->mFIFOHead - this->mFIFOTail);   
+            retVal = this->usFifoSize - (this->usFifoReadPtr - this->usFifoWritePtr);   
         }
     }
 	return (retVal);
 }
 
-/*******************************************************************************
-**  FUNCTION      : fifo_have_enough_space                                        
-**  DESCRIPTION   : This function judge fifo buffer have enough space to
-                    the current length of FIFO buffer
-**  PARAMETERS    : this
-**  RETURN        : u16
-*******************************************************************************/
-static u16 fifo_have_enough_space(FIFO_TYPE *this , uint8_t nBytes)
+
+static uint16_t _Fifo_Have_Enough_Space(ST_Fifo_Type *this , uint8_t nBytes)
 {
     /*this buffer have one byte canot be used.
       we should input one length byte + n data byte to FIFO buffer*/
-    if((this->mFIFOSize - fifo_current_length(this) - 0x01) >=  (nBytes + 0x01))
+    if((this->usFifoSize - _Fifo_Current_Length(this) - 0x01) >=  (nBytes + 0x01))
     {
         return TRUE;
     }
@@ -272,5 +233,5 @@ static u16 fifo_have_enough_space(FIFO_TYPE *this , uint8_t nBytes)
     }
 }
 
-/**************** END OF FILE *****************************************/
-
+    
+/**************** (C) COPYRIGHT 2010-2018 Efficient *****END OF FILE***********/

@@ -24,9 +24,7 @@
 #define  TASK_HEARTBEAT_GLOBAL
 
 /* includes-------------------------------------------------------------------*/
-#include "Task_Heartbeat.h"
-#include "Communication\tp_msg.h"
-
+#include "Communication\Commu.h"
 
     
 /* Private typedef&macro&definde----------------------------------------------*/
@@ -43,7 +41,7 @@ void Task_Heartbeat_Init(void)
 
 void Task_Heartbeat_Proc(void *arg)
 {
-	heartbeat_send();   
+	Commu_Send_HeartbeatPKT();   
 }
 
     

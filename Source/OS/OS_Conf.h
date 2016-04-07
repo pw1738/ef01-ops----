@@ -24,7 +24,7 @@
 //#define OS_PERIOD  1000000 /* 1us */
 //#define OS_PERIOD 2000 /* 500us */
 //#define OS_PERIOD 5000 /* 200us */
-#define OS_PERIOD 10000 /* 100us */
+#define OS_PERIOD 1000 /* 100us */
 
 
 typedef enum{
@@ -52,7 +52,7 @@ BEGIN_OS
 
 OS_TASK(EN_Task_ID_Led, Task_Led_Proc, Task_Led_Init, EN_TASK_Periodic, 500 OS_PERIOD_UNIT_1MS, 500 OS_PERIOD_UNIT_1MS, "Led task")   
 OS_TASK(EN_Task_ID_Heartbeat, Task_Heartbeat_Proc, Task_Heartbeat_Init, EN_TASK_Periodic, 2000 OS_PERIOD_UNIT_1MS, 2000 OS_PERIOD_UNIT_1MS, "Heatbeat task")  
-OS_TASK(EN_Task_ID_Communication, Task_Communication_Proc, Task_Communication_Init, EN_TASK_Periodic, 2 OS_PERIOD_UNIT_1MS, 2 OS_PERIOD_UNIT_1MS, "Communication task")   
+OS_TASK(EN_Task_ID_Commu, Task_Commu_Proc, Task_Commu_Init, EN_TASK_Periodic, 2 OS_PERIOD_UNIT_1MS, 2 OS_PERIOD_UNIT_1MS, "Communication task")   
 OS_TASK(EN_Task_ID_Sprayer, Task_Sprayer_Proc, Task_Sprayer_Init, EN_TASK_Periodic, 3000 OS_PERIOD_UNIT_1MS, 3000 OS_PERIOD_UNIT_1MS, "sprayer task")   
 
 

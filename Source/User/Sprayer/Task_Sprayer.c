@@ -24,7 +24,6 @@
 #define  TASK_SPRAYER_GLOBAL
 
 /* includes-------------------------------------------------------------------*/
-#include "Sprayer\Task_Sprayer.h"
 #include "main.h"
     
 /* Private typedef&macro&definde----------------------------------------------*/
@@ -36,7 +35,8 @@
     
 void Task_Sprayer_Init(void)
 {
-    g_stMainSystemCB.pstSprayer->init(g_stMainSystemCB.pstSprayer);
+    //g_stMainSystemCB.pstSprayer->init(g_stMainSystemCB.pstSprayer);
+    Sprayer_Init(g_stMainSystemCB.pstSprayer);
 }
 
 void Task_Sprayer_Proc(void *arg)

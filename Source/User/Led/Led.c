@@ -96,6 +96,8 @@ void Led_Init(void)
 	GPIO_Init(GPIOB, &GPIO_InitStructure);   // Initialize GPIO B    
 
     _Led_Var_Init();
+	LED_Switch(EN_LED_LED1, EN_LED_Switch_Blink);
+	LED_Switch(EN_LED_LED2, EN_LED_Switch_Blink);
 }
 
 
@@ -106,34 +108,13 @@ void LED_Switch(uint8_t led, EN_LED_Switch_Type type)
         LED_Assert(__LINE__, __FUNCTION__, "invalid paramter led(%d) -_-", led);
     }
 
-    switch(type)
+    if(g_stLedCB.aLedSwitchTypeArray[led] != EN_LED_Switch_Blink)
     {
-    case EN_LED_Switch_Off:
-        if(g_stLedCB.aLedSwitchTypeArray[led] != EN_LED_Switch_Off)
-        {
-            g_stLedCB.aLedSwitchTypeArray[led] = type;
-        }
-        break;
-        
-    case EN_LED_Switch_On:
-        if(g_stLedCB.aLedSwitchTypeArray[led] != EN_LED_Switch_On)
-        {
-            g_stLedCB.aLedSwitchTypeArray[led] = type;
-        }        
-        break;
-
-    case EN_LED_Switch_Blink:
-        if(g_stLedCB.aLedSwitchTypeArray[led] != EN_LED_Switch_Blink)
-        {
-            g_stLedCB.aLedSwitchTypeArray[led] = type;
-        }         
-        break;
-    default:
-        break;
-    }    
+        g_stLedCB.aLedSwitchTypeArray[led] = type;
+    }   
 }
 
-void LED_Loop_Proc(void)
+void LED_Proc(void)
 {
     if(EN_LED_Switch_Off == g_stLedCB.aLedSwitchTypeArray[0])
     {

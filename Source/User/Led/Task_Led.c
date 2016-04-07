@@ -24,7 +24,6 @@
 #define  TASK_LED_GLOBAL
 
 /* includes-------------------------------------------------------------------*/
-#include "Task_Led.h"
 #include "Led.h"
     
 /* Private typedef&macro&definde----------------------------------------------*/
@@ -45,7 +44,7 @@ void Task_Led_Init(void)
 
 void Task_Led_Proc(void *arg)
 {
-    LED_Loop_Proc();
+    LED_Proc();
 }
 
 

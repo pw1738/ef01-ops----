@@ -20,6 +20,7 @@ Others      :
 /* includes-------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdint.h>
+#include <limits.h>
 #include "stm32f10x.h"
 
 /* define a EN_OS_Task_ID_Type */
@@ -47,14 +48,15 @@ Others      :
 
 /* Private typedef -----------------------------------------------------------*/
 typedef struct{
-    uint32_t uiOSTimeCounter;
-    uint32_t uiOSTimeCounterBackup;
-    uint32_t uiLastOSTimeCounter;
+    __IO uint32_t uiLastTime;
+    __IO uint32_t uiLocalTime;
 }ST_OS_CB_Type;
+
 
 
 /* Private variables ---------------------------------------------------------*/
 ST_OS_CB_Type g_stOSCB = {0};
+
 
 
 
@@ -135,23 +137,36 @@ void OS_Init(void)
 
 void OS_Loop(void)
 {
-    int iLoop;
+    uint32_t iLoop, uiLocalTimeBackup = 0, uiDiff = 0;
 
-    g_stOSCB.uiOSTimeCounterBackup = g_stOSCB.uiOSTimeCounter;
-    if(g_stOSCB.uiOSTimeCounterBackup > g_stOSCB.uiLastOSTimeCounter)
+    uiLocalTimeBackup = g_stOSCB.uiLocalTime;
+    if(uiLocalTimeBackup != g_stOSCB.uiLastTime)
     {
         for(iLoop = 0; iLoop < OS_TASK_MAX; iLoop++)
         {
             if(g_astOSTaskArray[iLoop].period != 0)
             {
-                if(g_astOSTaskArray[iLoop].period >= g_stOSCB.uiOSTimeCounterBackup - g_stOSCB.uiLastOSTimeCounter)
+                if(uiLocalTimeBackup > g_stOSCB.uiLastTime)
                 {
-                    g_astOSTaskArray[iLoop].period -= g_stOSCB.uiOSTimeCounterBackup - g_stOSCB.uiLastOSTimeCounter;
+                    uiDiff = uiLocalTimeBackup - g_stOSCB.uiLastTime;
+                }
+                else if (uiLocalTimeBackup < g_stOSCB.uiLastTime)
+                {
+                    uiDiff = uiLocalTimeBackup + UINT_MAX - g_stOSCB.uiLastTime;
+                }
+                else /*!< uiLocalTimeBackup = g_stOSCB.uiLastTime */
+                {
+                    uiDiff = 0;
+                }
+
+                if(g_astOSTaskArray[iLoop].period >= uiDiff)
+                {
+                    g_astOSTaskArray[iLoop].period -= uiDiff;
                 }
                 else
                 {
                     g_astOSTaskArray[iLoop].period = 0;
-                }
+                }                  
             }
 
             if(0 == g_astOSTaskArray[iLoop].period)
@@ -174,29 +189,17 @@ void OS_Loop(void)
                 }
             }
         } 
-        g_stOSCB.uiLastOSTimeCounter = g_stOSCB.uiOSTimeCounter;
-    }
+
+        g_stOSCB.uiLastTime = g_stOSCB.uiLocalTime;
+    }   
 }
 
-/*******************************************************************************
- Prototype    : OS_ISR_handler
- Description  : 
- Input        : 
- Output       : 
- Return Value : 
- Calls        : 
- Called By    : 
- 
- History      :
-  1.Date         -- 2016/1/21 17:14:57:452
-    Author       -- ranwei
-    Modification -- Created function
 
-*******************************************************************************/
-void OS_ISR_handler(void)
+void OS_Time_Update(void)
 {
-    g_stOSCB.uiOSTimeCounter++;
+    g_stOSCB.uiLocalTime++; 
 }
+
 
 
 /**************** (C) COPYRIGHT 2010-2018 Efficient *****END OF FILE***********/

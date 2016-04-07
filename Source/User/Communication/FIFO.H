@@ -1,53 +1,74 @@
-/***********************************************************************
-*   Copyright (c) 2015, Shenzhen YIFEIXING Co., Ltd.				   *
-*				  All Rights Reserved.          					   *
-*   Department : RN R&D SW1      									   *
-*   AUTHOR	   :            										   *
-************************************************************************
-* Object        : 
-* Module        : 
-* Instance      : 
-* Description   : 
-*-----------------------------------------------------------------------
-* Version: 
-* Date: 
-* Author: wangwei
-***********************************************************************/
-/*-History--------------------------------------------------------------
-* Version       Date    Name      Changes and comments
-* V1.0				20151215	wangwei
-*=====================================================================*/
-#ifndef _FIFO_H_
-#define _FIFO_H_ 
+/*******************************************************************************
+        (c) COPYRIGHT 2010-2018 by Efficient Systems, Inc.    
+                          All rights reserved.
+    
+       This software is confidential and proprietary to Efficient 
+     Systems, Inc.  No part of this software may be reproduced,    
+     stored, transmitted, disclosed or used in any form or by any means
+     other than as expressly provided by the written license agreement    
+     between Efficient Systems and its licensee.
+ FileName    : Fifo.h
+ Author      : rw
+ Version     : 
+ Date        : 2016/3/8 22:34:50:274
+ Description : 
+ Others      : 
+
+ History      :
+  1.Date         -- 2016/3/8 22:34:50:274
+    Author       -- rw
+    Modification -- Created file
+
+*******************************************************************************/
+#ifndef __FIFO_H__
+#define __FIFO_H__
+
+#ifdef __cplusplus
+extern "C"{
+#endif /* __cplusplus */
+
+#ifdef  FIFO_GLOBAL
+#define FIFO_EXT
+#else
+#define FIFO_EXT extern
+#endif /* FIFO_GLOBAL */
+
+/*============================================================================*/
+/*                                  @INCLUDES                                 */
+/*============================================================================*/
+#include <stdint.h>
 
 
-#include "stm32f10x.h"
-#include "Communication\FIFO_IF.H"
-/**** Definition of constants ****/
+/*============================================================================*/
+/*                              @MACROS & @TYPEDEFS                           */
+/*============================================================================*/
+typedef struct 
+{
+    uint8_t  *pucFifoBuffer;
+    uint16_t  usFifoReadPtr;   
+    uint16_t  usFifoWritePtr;  
+    uint16_t  usFifoSize;
+}ST_Fifo_Type;
 
 
-/**** Definition of types ****/ 
 
-/**** Definition of macros ****/
+/*============================================================================*/
+/*                               @GLOBAL VIRIABLES                            */
+/*============================================================================*/
 
-
-/**** Declaration of constants ****/
-
-
-/**** Declaration of variables ****/
-
-
-/**** Declaration of functions ****/
-
-BOOL fifo_is_empty(FIFO_TYPE *this  ) ;
-
-static BOOL fifo_is_full(FIFO_TYPE *this  );
-static BOOL fifo_input_byte( FIFO_TYPE *this , unsigned char byte );
-static BOOL fifo_output_byte(FIFO_TYPE *this, uint8_t *pdata);
-static uint16_t fifo_current_length(FIFO_TYPE *this  );
-static uint16_t fifo_have_enough_space(FIFO_TYPE *this , uint8_t nBytes);
+/*============================================================================*/
+/*                                    @FUNCS                                  */
+/*============================================================================*/
+void Fifo_Init(ST_Fifo_Type * this, uint8_t * pBuf, uint16_t nSize);
+BOOL Fifo_Input_Frame(ST_Fifo_Type * this, uint8_t * pFrame, uint8_t length);
+BOOL Fifo_Output_Frame(ST_Fifo_Type * this, uint8_t * pFrame, uint8_t * pLength);
+BOOL Fifo_IS_Empty(ST_Fifo_Type *this);
 
 
-#endif /*_FIFO_IF_H_*/
 
-/****************************** END OF FILE ***************************/
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* __FIFO_H__ */
+/**************** (C) COPYRIGHT 2010-2018 Efficient *****END OF FILE***********/
