@@ -43,16 +43,18 @@ extern "C"{
 ** @group : System Version
 ** @{
 */
-#define __CONCAT_VERSION(main, sub1, sub2, rc) main##"."##sub1##"."##sub2##"-"##rc
-#define CONCAT_VERSION(main, sub1, sub2, rc) __CONCAT_VERSION(main, sub1, sub2, rc)
-#define __SYSTEM_VERSION_MAIN   "0" /* main version */                                  
-#define __SYSTEM_VERSION_SUB1   "0" /* sub1 version */
-#define __SYSTEM_VERSION_SUB2   "0" /* sub2 version */
-#define __SYSTEM_VERSION_RC     "R02.20160318" /*!  release candidate */ 
-#define __SYSTEM_VERSION        CONCAT_VERSION(__SYSTEM_VERSION_MAIN, __SYSTEM_VERSION_SUB1, __SYSTEM_VERSION_SUB2, __SYSTEM_VERSION_RC)
+#define __CONCAT_VERSION(head, main, sub1, sub2, modify) head##main##"."##sub1##"."##sub2##"."##modify
+#define CONCAT_VERSION(head, main, sub1, sub2, modify) __CONCAT_VERSION(head, main, sub1, sub2, modify)
+#define __SYSTEM_VERSION_HEAD    "EF01_30_" /* main version */                                  
+#define __SYSTEM_VERSION_MAIN    "0" /* main version */                                  
+#define __SYSTEM_VERSION_SUB1    "0" /* sub1 version */
+#define __SYSTEM_VERSION_SUB2    "0" /* sub2 version */
+#define __SYSTEM_VERSION_MODIFY  "20160330_T" /*!  release candidate */ 
+#define __SYSTEM_VERSION         CONCAT_VERSION(__SYSTEM_VERSION_HEAD, __SYSTEM_VERSION_MAIN, __SYSTEM_VERSION_SUB1, __SYSTEM_VERSION_SUB2, __SYSTEM_VERSION_MODIFY)
 /*
 ** @}
 */
+
 //#define USE_DHCP       /* enable DHCP, if disabled static address is used*/
 
 /* retarget the printf to com */
