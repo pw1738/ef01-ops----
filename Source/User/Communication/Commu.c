@@ -136,17 +136,6 @@ typedef enum
     EN_Commu_ST_END/*Only for tx*/
 }EN_Commu_PROCESS_STATUS_Type;
 
-typedef enum{
-    EN_Tx_MessageID_Broadcast = 0x01,
-    EN_Tx_MessageID_Heartbeat = 0x66,
-}EN_Tx_MessageID_Type;
-
-typedef enum{
-    EN_Rx_MessageID_Broadcast = 0x01,
-    EN_Rx_MessageID_Heartbeat = 0x6E,
-}EN_Rx_MessageID_Type;
-
-
 #pragma pack(push, 1)
 
 typedef struct 
@@ -163,6 +152,9 @@ typedef struct
     uint8_t ucFrameRC;/** Rolling code, value that will be sent in a new frame**/
     uint8_t ucFrameLen; /** data frame len,  not including the len byte **/ 
     uint8_t ucByteIndex;	
+    uint8_t ucACKFrameRC;
+    uint8_t bIsSendReqACK : 1;
+    uint8_t bReserve1 : 7;
 }ST_TX_Info_Type;
 
 typedef struct 
@@ -190,14 +182,6 @@ typedef struct
     uint16_t usTimeoutCounter;   
 }ST_Commu_Timer_Type;
 
-/*
-typedef struct 
-{
-    ST_Fifo_Type stFifoInfo;
-    uint8_t  *pBuff;
-}ST_COMMU_FIFO_Type;
-*/
-
 typedef struct{
     ST_Frame_Type  stOutFrame;
     ST_Frame_Type  stInFrame;
@@ -215,22 +199,9 @@ typedef struct{
     
     volatile uint8_t ucSendFrameCounter;
     volatile uint8_t ucLostAckCounter;
-    //volatile uint8_t aucOutBuff[SZ_MSG_OUT_BUF_MAX];
     volatile uint8_t ucSendFrameHandledCounter;
-    //volatile uint8_t ucReadFrameCounter;
-    //volatile uint8_t ucReadFrameHandledCounter;
     volatile uint8_t ucSendFrameIntervalCounter; /* 控制发送周期的计数器 */
-    
-    // Addr
-    //uint8_t Addr_64[8] = { 0x00, 0x13, 0xA2, 0x00, 0x40, 0xF3, 0x3B, 0x00 } ;
-    //uint8_t Addr_16[2] = { 0xFF, 0xFE } ;
-    //uint8_t addr_16_len = 0 ;
-    //uint8_t addr_64_len = 0 ;
-    uint8_t aucAddr64[8];
-    uint8_t aucAddr16[2];
-    uint8_t ucAddr16Len;
-    uint8_t ucAddr64Len;
-    
+        
     ST_Commu_Timer_Type stReqSendTimer;
     ST_Commu_Timer_Type stEnterTxTimer;
     ST_Commu_Timer_Type stTxTimer;
@@ -250,35 +221,7 @@ typedef struct{
     uint8_t aucOutBuffFour[SZ_Commu_OUT_BUF_FOUR_MAX];    
 }ST_Commu_CB_Type;
 
-
-/*!< 通讯消息结构体 */
-typedef union
-{
-    struct
-    {
-        uint8_t msgseq;
-        uint8_t compid;
-    }msgid;
-    uint16_t msg_id;
-} MSG_ID;
-
-typedef union
-{
-    uint8_t ucComponentID;
-    uint8_t ucMessageSequence;
-}ST_Commu_MessageID_Type;
-
-#define SZ_Commu_MessageData_Max 64
-
-typedef struct 
-{
-    uint8_t ucType;
-    ST_Commu_MessageID_Type stMessageID;
-    uint8_t ucSize;
-    uint8_t ucPriority;
-    uint8_t aucMessageData[SZ_Commu_MessageData_Max];	
-}ST_Comm_Message_Type;
-
+/** Message包头 */
 typedef struct 
 {
     uint8_t ucType;
@@ -433,6 +376,7 @@ static BOOL _Commu_Has_Frame_Send(void)
 static BOOL _Commu_Send_Out_Frame(void)
 {
     BOOL ret_val = FALSE;
+    //uint8_t ucCs,iLoop;
 
     if(FALSE == g_stCommuCB.stOutFrame.bValid)/**g_stCommuCB.stOutFrame send completely **/
     {
@@ -459,8 +403,22 @@ static BOOL _Commu_Send_Out_Frame(void)
 
         if(TRUE == ret_val)
         {
+            ++g_stCommuCB.stTxInfo.ucFrameRC;
             g_stCommuCB.stOutFrame.bValid = TRUE;
             ret_val = TRUE;
+
+            /*
+			ucCs = ++uart_tx_info.frame_id;  // fame_id ++  ??
+			ucCs ^= uart_out_frame.length;//cs  =ID^LENGTH^DATA1^DATA2^....^DATAn    To caculate the checksum
+			
+			for(i=0; i<uart_out_frame.length ;i++)
+			{
+				ucCs^=uart_out_frame.buff[i];
+			}
+			uart_out_frame.buff[uart_out_frame.length] = ucCs;
+			uart_out_frame.bValid = TRUE;
+			ret_val = TRUE;            
+			*/
         }
     }
     return ret_val;
@@ -556,7 +514,9 @@ static void __Commu_Packet_Message(uint8_t messageType, uint8_t compID, uint8_t 
 void __Commu_SprayerStateSwitchMessage_Rep_send(void)
 {
     uint8_t ucResultCode = EN_Result_Positive;
-    __Commu_Packet_Message(0x02, 0x02, 0x01, 0x03, &ucResultCode, 1);
+
+    g_stCommuCB.stTxInfo.bIsSendReqACK = 1;
+    __Commu_Packet_Message(0x03, 0x02, 0x01, 0x03, &ucResultCode, 1);
 
     Commu_Send(6, g_aucMessageBuff);
 }
@@ -564,7 +524,7 @@ void __Commu_SprayerStateSwitchMessage_Rep_send(void)
 void __Commu_SprayerInforSetMessage_Rep_send(void)
 {
     uint8_t ucResultCode = EN_Result_Positive;
-    __Commu_Packet_Message(0x02, 0x02, 0x02, 0x03, &ucResultCode, 1);
+    __Commu_Packet_Message(0x03, 0x02, 0x02, 0x03, &ucResultCode, 1);
     Commu_Send(6, g_aucMessageBuff);
 }
 
@@ -577,13 +537,12 @@ static void __Commu_handle(uint8_t *frame)
     //_Commu_Message_Decode(frame,&stMsg);
 
 
-    if(0x00 == pstMsgHeader->ucType)
+    if(0x01 == pstMsgHeader->ucType)
     {
         if((0x02 == pstMsgHeader->ucComponentID) && (0x01 == pstMsgHeader->ucMessageSequence))
         {
             if(0x00 == pucData[0]) /*!< Stop spraying */
-            {
-                g_stMainSystemCB.pstSprayer->stateSwitch(g_stMainSystemCB.pstSprayer, OFF);
+            {                g_stMainSystemCB.pstSprayer->stateSwitch(g_stMainSystemCB.pstSprayer, OFF);
             }
             else if(0x01 == pucData[0]) /*!< Start spraying */
             {
@@ -819,6 +778,8 @@ static void  _Commu_CB_Init(ST_Commu_CB_Type *pstCB)
     pstCB->stTxInfo.ucFrameRC = 0;
     pstCB->stTxInfo.ucFrameLen = 0;
     pstCB->stTxInfo.ucByteIndex = 0;
+    pstCB->stTxInfo.bIsSendReqACK = 0;
+    pstCB->stTxInfo.ucACKFrameRC = 0;
 
     /*!< init frame */
     pstCB->stInFrame.bValid = FALSE;
@@ -842,21 +803,7 @@ static void  _Commu_CB_Init(ST_Commu_CB_Type *pstCB)
     _Commu_CLR_Alarm(&pstCB->stEnterTxTimer);
     _Commu_CLR_Alarm(&pstCB->stTxTimer);
     _Commu_CLR_Alarm(&pstCB->stAckTimer);
-    _Commu_CLR_Alarm(&pstCB->stRxTimer);   
-
-    /*!< init addr */
-    pstCB->aucAddr64[0] = 0x00;
-    pstCB->aucAddr64[1] = 0x13;
-    pstCB->aucAddr64[2] = 0xA2;
-    pstCB->aucAddr64[3] = 0x00;
-    pstCB->aucAddr64[4] = 0x40;
-    pstCB->aucAddr64[5] = 0xFB;
-    pstCB->aucAddr64[6] = 0xA0;
-    pstCB->aucAddr64[7] = 0x7A;
-    pstCB->aucAddr16[0] = 0xFF;
-    pstCB->aucAddr16[1] = 0xFE;
-    pstCB->ucAddr16Len = 0 ;
-    pstCB->ucAddr64Len = 0 ;   	
+    _Commu_CLR_Alarm(&pstCB->stRxTimer);   	
 }
 
 
@@ -925,7 +872,19 @@ void Commu_ISR_TX_Proc(void)
 			
     case EN_Commu_ST_RC:
         g_stCommuCB.stTxInfo.ucCs = g_stCommuCB.stTxInfo.ucFrameRC;
-        __Commu_SendChar(g_stCommuCB.stTxInfo.ucFrameRC);
+        /*
+        if ( 1 == g_stCommuCB.stTxInfo.bIsSendReqACK )
+        {
+            __Commu_SendChar(g_stCommuCB.stTxInfo.ucACKFrameRC);
+            g_stCommuCB.stTxInfo.ucACKFrameRC = 0;
+            g_stCommuCB.stTxInfo.bIsSendReqACK = 0;
+        }
+        else
+        {
+        */
+            __Commu_SendChar(g_stCommuCB.stTxInfo.ucFrameRC);
+        //}
+        
         g_stCommuCB.stTxInfo.ucStatus = EN_Commu_ST_LEN;
         break ;
 			
@@ -976,7 +935,6 @@ void Commu_ISR_TX_Proc(void)
         _Commu_End_Send(); /** one of the two places to call uart_tbox_end_send() **/
         g_stCommuCB.stTxInfo.ucStatus = EN_Commu_ST_IDLE;        
         break;
-
                     
     default:
         __Commu_SendChar(0xff);
@@ -1118,15 +1076,24 @@ void Commu_ISR_RX_Proc(void)
             ucRxFramePrio = g_stCommuCB.stInFrame.aucBuff[TBOX_CMD_PRIO];
              if(ucRxFramePrio <= Commu_Message_PRIO_NUM)
              {
-                 if(TRUE == Fifo_Input_Frame(&g_stCommuCB.stInFifo[ucRxFramePrio-1], &(g_stCommuCB.stInFrame.aucBuff[0]), g_stCommuCB.stInFrame.ucLength)) 
-                 {/**if fifo full, will not send ack, so navi will send again. **/
-                     g_stCommuCB.ucRecFrameCounter++;
-                     g_stCommuCB.stRxInfo.ucLastFrameRC  = g_stCommuCB.stRxInfo.ucFrameRC;                    
-                 }
-                 else
-                 {
+                 
+                if(TRUE == Fifo_Input_Frame(&g_stCommuCB.stInFifo[ucRxFramePrio-1], &(g_stCommuCB.stInFrame.aucBuff[0]), g_stCommuCB.stInFrame.ucLength)) 
+                {/**if fifo full, will not send ack, so navi will send again. **/
+                    g_stCommuCB.ucRecFrameCounter++;
+                    g_stCommuCB.stRxInfo.ucLastFrameRC  = g_stCommuCB.stRxInfo.ucFrameRC;                    
+
+                    if(EN_MSG_REQ_ACK_NEEDED == g_stCommuCB.stRxInfo.ucMsgType)
+                    {
+                        if(0 == g_stCommuCB.stTxInfo.ucACKFrameRC)
+                        {
+                            g_stCommuCB.stTxInfo.ucACKFrameRC = g_stCommuCB.stRxInfo.ucFrameRC;
+                        }
+                    }
+                }
+                else
+                {
                          //fifo is full
-                 }
+                }
              }
         }
         else

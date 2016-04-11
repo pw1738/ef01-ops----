@@ -97,10 +97,10 @@ static void _Sprayer_Lowlevel_Init(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);       
  
     /*!< GPIOA Configuration: TIM3 channel 1 and 3 as alternate function push-pull */ 
-    GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_8 | GPIO_Pin_9 |GPIO_Pin_10; 
+    GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10; 
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;           // ¸´ÓÃÍÆÍìÊä³ö 
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz; 
-    GPIO_Init(GPIOA, &GPIO_InitStructure);   
+    GPIO_Init(GPIOA, &GPIO_InitStructure);         
 
     /*!< Switch  PA9 configuration */
     //GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_9;
@@ -115,8 +115,8 @@ static void _Sprayer_Lowlevel_Init(void)
        and Connectivity line devices and to 24 MHz for Low-Density Value line and
        Medium-Density Value line devices
 
-       The objective is to generate 7 PWM signal at 16 Hz:
-       - TIM1_Period = (SystemCoreClock /((499 + 1)* 16)) - 1
+       The objective is to generate 7 PWM signal at 5 Hz:
+       - TIM1_Period = (SystemCoreClock /((499 + 1)* 5)) - 1
        The channel 1 and channel 1N duty cycle is set to 50%
        The channel 2 and channel 2N duty cycle is set to 37.5%
        The channel 3 and channel 3N duty cycle is set to 25%
@@ -125,8 +125,8 @@ static void _Sprayer_Lowlevel_Init(void)
        - ChannelxPulse = DutyCycle * (TIM1_Period - 1) / 100
        ----------------------------------------------------------------------- */
 
-    /* Compute the value to be set in ARR regiter to generate signal frequency at 16 hz */
-    TimerPeriod = (SystemCoreClock / ((499 + 1) * 16) ) - 1;
+    /* Compute the value to be set in ARR regiter to generate signal frequency at 5 hz */
+    TimerPeriod = (SystemCoreClock / ((499 + 1) * 5) ) - 1;
     /* Compute CCR1 value to generate a duty cycle at 50% for channel 1 and 1N */
     //Channel1Pulse = (uint16_t) (((uint32_t) 5 * (TimerPeriod - 1)) / 10);
     Channel1Pulse = (uint16_t) (((uint32_t) 0 * (TimerPeriod - 1)) / 100);
@@ -246,7 +246,8 @@ static void _Sprayer_StateSwitch(struct ST_Sprayer *this, EN_StateSwitch_Type ty
         //this->astFlowChannelArray[0]->valve->StateSwitch(this->astFlowChannelArray[0]->valve, ON);
         //PWM_Config(50, 80);
         _Sprayer_PWMSet(this->ucFlowLevel, this->ucAtomizeLevel, 100);
-        //_Sprayer_PWMSet(60, 80, 100);
+        //_Sprayer_PWMSet(100, 80, 100);
+        //GPIO_SetBits(GPIOA, GPIO_Pin_9);
         this->ucIsSprayerOn = ON;
     }
     else /*!< OFF */
@@ -260,6 +261,7 @@ static void _Sprayer_StateSwitch(struct ST_Sprayer *this, EN_StateSwitch_Type ty
             //PWM_Config(0, 0);
             _Sprayer_PWMSet(0, 0, 0);
             this->ucIsSprayerOn = OFF;    
+            //GPIO_ResetBits(GPIOA, GPIO_Pin_9);
         }
     }
 }
