@@ -49,7 +49,7 @@ extern "C"{
 #define __SYSTEM_VERSION_MAIN    "0" /* main version */                                  
 #define __SYSTEM_VERSION_SUB1    "0" /* sub1 version */
 #define __SYSTEM_VERSION_SUB2    "0" /* sub2 version */
-#define __SYSTEM_VERSION_MODIFY  "20160322_T" /*!  release candidate */ 
+#define __SYSTEM_VERSION_MODIFY  "20160412_T" /*!  release candidate */ 
 #define __SYSTEM_VERSION         CONCAT_VERSION(__SYSTEM_VERSION_HEAD, __SYSTEM_VERSION_MAIN, __SYSTEM_VERSION_SUB1, __SYSTEM_VERSION_SUB2, __SYSTEM_VERSION_MODIFY)
 /*
 ** @}
