@@ -469,6 +469,16 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>ST_Libraries</GroupName>
+          <Files>
+            <File>
+              <FileName>stm32f10x_it.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Source\ST_Libraries\stm32f10x_it.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>OS</GroupName>
           <Files>
             <File>
@@ -501,16 +511,6 @@
               <FileType>1</FileType>
               <FilePath>..\Source\User\main.c</FilePath>
             </File>
-            <File>
-              <FileName>stm32f10x_it.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Source\ST_Libraries\stm32f10x_it.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Source\User\pwm.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -542,29 +542,24 @@
           <GroupName>User\Communication</GroupName>
           <Files>
             <File>
-              <FileName>FIFO.C</FileName>
+              <FileName>Commu_Uart.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Source\User\Communication\FIFO.C</FilePath>
+              <FilePath>..\Source\User\Communication\Commu_Uart.c</FilePath>
             </File>
             <File>
-              <FileName>tp_msg.c</FileName>
+              <FileName>Fifo.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Source\User\Communication\tp_msg.c</FilePath>
+              <FilePath>..\Source\User\Communication\Fifo.c</FilePath>
             </File>
             <File>
-              <FileName>uart_tp.c</FileName>
+              <FileName>Commu.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Source\User\Communication\uart_tp.c</FilePath>
+              <FilePath>..\Source\User\Communication\Commu.c</FilePath>
             </File>
             <File>
-              <FileName>Task_Communication.c</FileName>
+              <FileName>Task_Commu.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Source\User\Communication\Task_Communication.c</FilePath>
-            </File>
-            <File>
-              <FileName>uart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Source\User\Communication\uart.c</FilePath>
+              <FilePath>..\Source\User\Communication\Task_Commu.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -77,7 +77,7 @@ LED_EXT ST_Led_CB g_stLedCB;
 /*============================================================================*/
 void Led_Init(void);
 void LED_Switch(uint8_t led, EN_LED_Switch_Type type);
-void LED_Loop_Proc(void);
+void LED_Proc(void);
 
 
 

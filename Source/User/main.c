@@ -160,9 +160,11 @@ int main(void)
     MainSystemCB_Var_Init();
     
     OS_Init();     
+    //g_stMainSystemCB.pstSprayer->stateSwitch(g_stMainSystemCB.pstSprayer, ON);
 
     for(;;)
     {
+        OS_Loop();
     }
 }
 

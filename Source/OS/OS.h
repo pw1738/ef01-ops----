@@ -49,6 +49,8 @@ extern "C"{
 /*                                    @FUNCS                                  */
 /*============================================================================*/
 void OS_Init(void);
+void OS_Loop(void);
+void OS_Time_Update(void);
 
 
 

@@ -7,7 +7,7 @@
      stored, transmitted, disclosed or used in any form or by any means
      other than as expressly provided by the written license agreement    
      between Efficient Systems and its licensee.
- FileName    : Task_LiquidCapacity.c
+ FileName    : Task_LiquidCap.c
  Author      : ranwei
  Version     : 
  Date        : 2016/3/18 11:14:17:189
@@ -26,7 +26,6 @@
 /* includes-------------------------------------------------------------------*/
 #include <stdio.h>
 #include "main.h"
-#include "LiquidCapacity\Task_LiquidCapacity.h"
 #include "LiquidCapacity\FDC1004.h"    
 
 		
@@ -39,12 +38,12 @@
 /* External functions --------------------------------------------------------*/
 /* External variables --------------------------------------------------------*/
 
-void Task_LiquidCapacity_Init(void)
+void Task_LiquidCap_Init(void)
 {
     FDC1004_Init();
 }
 
-void Task_LiquidCapacity_Proc(void *arg)
+void Task_LiquidCap_Proc(void *arg)
 {
     g_stMainSystemCB.pstLiquidCapacityServer->ModuleProc(g_stMainSystemCB.pstLiquidCapacityServer, NULL);
 }

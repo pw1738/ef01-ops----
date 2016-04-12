@@ -23,11 +23,11 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
+#include "Communication\Commu.h"
+#include "OS.h"
 
 
-extern void OS_ISR_handler(void);
-extern void uart_tx_proc(void);
-extern void uart_rx_proc(void);
+
 
 
 /** @addtogroup STM32F10x_StdPeriph_Examples
@@ -144,7 +144,7 @@ void PendSV_Handler(void)
   */
 void SysTick_Handler(void)
 {
-    OS_ISR_handler();
+    OS_Time_Update();
 }
 
 /******************************************************************************/
@@ -173,12 +173,12 @@ void USART3_IRQHandler(void)
 	if ( USART_GetITStatus(USART3, USART_IT_TC) == SET)
 	{
 		USART_ClearITPendingBit( USART3,USART_IT_TC); 
-		uart_tx_proc();
+		Commu_ISR_TX_Proc();
 	}
 	else if ( USART_GetITStatus(USART3, USART_IT_RXNE) == SET )
 	{
 		USART_ClearITPendingBit( USART3,USART_IT_RXNE);
-		uart_rx_proc();
+		Commu_ISR_RX_Proc();
 	}
 }
 

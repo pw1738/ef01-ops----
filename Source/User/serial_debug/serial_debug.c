@@ -165,8 +165,10 @@ PUTCHAR_PROTOTYPE
 {
     /* Place your implementation of fputc here */
     /* e.g. write a character to the USART */
+    while(!(SERIAL_DEBUG_COM->SR & USART_SR_TXE));
     USART_SendData(SERIAL_DEBUG_COM, (uint8_t) ch);
-
+    while(!(SERIAL_DEBUG_COM->SR & USART_SR_TC));     
+    
     return ch;
 }
 #endif

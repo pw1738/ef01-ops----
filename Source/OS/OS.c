@@ -20,6 +20,7 @@ Others      :
 /* includes-------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdint.h>
+#include <limits.h>
 #include "stm32f10x.h"
 
 /* define a EN_OS_Task_ID_Type */
@@ -46,7 +47,16 @@ Others      :
 #define PERIOD_IDLE 0
 
 /* Private typedef -----------------------------------------------------------*/
+typedef struct{
+    __IO uint32_t uiLastTime;
+    __IO uint32_t uiLocalTime;
+}ST_OS_CB_Type;
+
+
+
 /* Private variables ---------------------------------------------------------*/
+ST_OS_CB_Type g_stOSCB = {0};
+
 
 
 
@@ -125,53 +135,71 @@ void OS_Init(void)
 }
 
 
-/*******************************************************************************
- Prototype    : OS_ISR_handler
- Description  : 
- Input        : 
- Output       : 
- Return Value : 
- Calls        : 
- Called By    : 
- 
- History      :
-  1.Date         -- 2016/1/21 17:14:57:452
-    Author       -- ranwei
-    Modification -- Created function
-
-*******************************************************************************/
-void OS_ISR_handler(void)
+void OS_Loop(void)
 {
-    int iLoop;
-    
-    for(iLoop = 0; iLoop < OS_TASK_MAX; iLoop++)
-    {
-        if(g_astOSTaskArray[iLoop].period != 0)
-        {
-            g_astOSTaskArray[iLoop].period--;
-        }
+    uint32_t iLoop, uiLocalTimeBackup = 0, uiDiff = 0;
 
-        if(0 == g_astOSTaskArray[iLoop].period)
+    uiLocalTimeBackup = g_stOSCB.uiLocalTime;
+    if(uiLocalTimeBackup != g_stOSCB.uiLastTime)
+    {
+        for(iLoop = 0; iLoop < OS_TASK_MAX; iLoop++)
         {
-            if(EN_TASK_OneShot == g_astOSTaskArray[iLoop].mode)
+            if(g_astOSTaskArray[iLoop].period != 0)
             {
-                if(g_astOSTaskArray[iLoop].periodicFunc)
+                if(uiLocalTimeBackup > g_stOSCB.uiLastTime)
                 {
-                    g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
+                    uiDiff = uiLocalTimeBackup - g_stOSCB.uiLastTime;
                 }
-                __OS_Clear_TaskStruct(&g_astOSTaskArray[iLoop]);
+                else if (uiLocalTimeBackup < g_stOSCB.uiLastTime)
+                {
+                    uiDiff = uiLocalTimeBackup + UINT_MAX - g_stOSCB.uiLastTime;
+                }
+                else /*!< uiLocalTimeBackup = g_stOSCB.uiLastTime */
+                {
+                    uiDiff = 0;
+                }
+
+                if(g_astOSTaskArray[iLoop].period >= uiDiff)
+                {
+                    g_astOSTaskArray[iLoop].period -= uiDiff;
+                }
+                else
+                {
+                    g_astOSTaskArray[iLoop].period = 0;
+                }                  
             }
-            else
+
+            if(0 == g_astOSTaskArray[iLoop].period)
             {
-                if(g_astOSTaskArray[iLoop].periodicFunc)
+                if(EN_TASK_OneShot == g_astOSTaskArray[iLoop].mode)
                 {
-                    g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
+                    if(g_astOSTaskArray[iLoop].periodicFunc)
+                    {
+                        g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
+                    }
+                    __OS_Clear_TaskStruct(&g_astOSTaskArray[iLoop]);
                 }
-                g_astOSTaskArray[iLoop].period = g_astOSTaskArray[iLoop].periodBackup;
+                else
+                {
+                    if(g_astOSTaskArray[iLoop].periodicFunc)
+                    {
+                        g_astOSTaskArray[iLoop].periodicFunc(g_astOSTaskArray[iLoop].arg);
+                    }
+                    g_astOSTaskArray[iLoop].period = g_astOSTaskArray[iLoop].periodBackup;
+                }
             }
-        }
-    }
+        } 
+
+        g_stOSCB.uiLastTime = g_stOSCB.uiLocalTime;
+    }   
 }
+
+
+void OS_Time_Update(void)
+{
+    g_stOSCB.uiLocalTime++; 
+}
+
 
 
 /**************** (C) COPYRIGHT 2010-2018 Efficient *****END OF FILE***********/

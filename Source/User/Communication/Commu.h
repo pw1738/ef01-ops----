@@ -7,35 +7,38 @@
      stored, transmitted, disclosed or used in any form or by any means
      other than as expressly provided by the written license agreement    
      between Efficient Systems and its licensee.
- FileName    : Communication.h
+ FileName    : Commu.h
  Author      : ranwei
  Version     : 
- Date        : 2016/3/16 11:26:49:266
+ Date        : 2016/3/25 20:18:47:391
  Description : 
  Others      : 
 
  History      :
-  1.Date         -- 2016/3/16 11:26:49:266
+  1.Date         -- 2016/3/25 20:18:47:391
     Author       -- ranwei
     Modification -- Created file
 
 *******************************************************************************/
-#ifndef __COMMUNICATION_H__
-#define __COMMUNICATION_H__
+#ifndef __COMMU_H__
+#define __COMMU_H__
 
 #ifdef __cplusplus
 extern "C"{
 #endif /* __cplusplus */
 
-#ifdef  COMMUNICATION_GLOBAL
-#define COMMUNICATION_EXT
+#ifdef  COMMU_GLOBAL
+#define COMMU_EXT
 #else
-#define COMMUNICATION_EXT extern
-#endif /* COMMUNICATION_GLOBAL */
+#define COMMU_EXT extern
+#endif /* COMMU_GLOBAL */
 
 /*============================================================================*/
 /*                                  @INCLUDES                                 */
 /*============================================================================*/
+#include <stdint.h>
+#include "stm32f10x.h"
+
 
 /*============================================================================*/
 /*                              @MACROS & @TYPEDEFS                           */
@@ -48,10 +51,18 @@ extern "C"{
 /*============================================================================*/
 /*                                    @FUNCS                                  */
 /*============================================================================*/
+void Commu_Init(void);
+void Commu_Proc(void *arg);
+BOOL Commu_Send(uint8_t nArgs, uint8_t *pArg);
+void Commu_Send_HeartbeatPKT(void);
+void Commu_ISR_TX_Proc(void);
+void Commu_ISR_RX_Proc(void);
+
+
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* __COMMUNICATION_H__ */
+#endif /* __COMMU_H__ */
 /**************** (C) COPYRIGHT 2010-2018 Efficient *****END OF FILE***********/
